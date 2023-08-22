@@ -31,13 +31,11 @@ const vpc = new aws.ec2.Vpc(vpc_name, {
     }
 });
 
-
-
 // User data to start a HTTP server in the EC2 instance
 const userDataMongo = `#!/bin/bash
-    sudo apt-get update
+    sudo apt-get update -y
     sudo apt-get install -y nodejs npm
-    mkdir –p /home/ubuntu/workspace
+    sudo mkdir –p /home/ubuntu/workspace
     cd /home/ubuntu/workspace
     sudo git clone https://github.com/santoshkar/myblog.git
     cd myblog/
@@ -46,13 +44,13 @@ const userDataMongo = `#!/bin/bash
 
 // User data to start a HTTP server in the EC2 instance
 const userData_NodeJs = `#!/bin/bash
-    sudo apt-get update
+    sudo apt-get update -y
     sudo apt-get install -y nodejs npm
     mkdir –p /home/ubuntu/workspace
     cd /home/ubuntu/workspace
-    git clone https://github.com/santoshkar/myblog.git
+    sudo git clone https://github.com/santoshkar/myblog.git
     cd myblog/
-    sudo node hello.js
+    sudo node hello_mongo.js
 `;
 
 
@@ -193,22 +191,6 @@ const secGroupPrivate_mongo = new aws.ec2.SecurityGroup(secGroup_name_private_mo
 });
 
 
-// 
-// Create and launch an EC2 instance into the public subnet.
-const ec2_mongo = ec2_instance_name+"-mongo";
-const serverMongo = new aws.ec2.Instance(ec2_mongo, {
-    instanceType: instanceTypeT2Micro,
-    keyName: "Key",
-    subnetId: privateSubnet_1b.id,
-    vpcSecurityGroupIds: [secGroupPrivate_mongo.id],
-    userData: userDataMongo,
-    ami: ami,
-    tags: {
-        Name: ec2_mongo,
-    },
-});
-
-
 
 
 /*
@@ -269,13 +251,27 @@ const secGroup_Nodejs = new aws.ec2.SecurityGroup(secGroup_name_nodejs, {
     }
 });
 
+const ec2_mongo = ec2_instance_name+"-mongo";
 const ec2_NodeJS = ec2_instance_name+"-nodejs";
+
+const serverMongo = new aws.ec2.Instance(ec2_mongo, {
+    instanceType: instanceTypeT2Micro,
+    subnetId: privateSubnet_1b.id,
+    keyName: "Key",
+    vpcSecurityGroupIds: [secGroupPrivate_mongo.id],
+    userData: userDataMongo,
+    ami: ami,
+    tags: {
+        Name: ec2_mongo,
+    },
+});
+
 const serverNodejs = new aws.ec2.Instance(ec2_NodeJS, {
     instanceType: instanceTypeT2Micro,
     subnetId: publicSubnet_1a.id,
     keyName: "Key",
     vpcSecurityGroupIds: [secGroup_Nodejs.id],
-    userData: userData_NodeJs,
+    userData: userDataMongo,
     ami: ami,
     tags: {
         Name: ec2_NodeJS,
@@ -286,7 +282,13 @@ const serverNodejs = new aws.ec2.Instance(ec2_NodeJS, {
 export const ip_serverNodejs = serverNodejs.publicIp;
 export const hostname_serverNodejs = serverNodejs.publicDns;
 export const url_serverNodejs = pulumi.interpolate`http://${serverNodejs.publicDns}`;
+export const ip_serverNodejsPrivate = serverNodejs.privateIp;
+export const hostname_serverNodejsPrivate = serverNodejs.privateDns;
+export const url_serverNodejsPrivate = pulumi.interpolate`http://${serverNodejs.privateDns}`;
 // Export the instance's publicly accessible IP address and hostname.
 export const ip_serverMongo = serverMongo.publicIp;
 export const host_serverMongo = serverMongo.publicDns;
 export const url_serverMongo = pulumi.interpolate`http://${serverMongo.publicDns}`;
+export const ip_serverMongoPrivate = serverMongo.privateIp;
+export const host_serverMongoPrivate = serverMongo.privateDns;
+export const url_serverMongoPrivate = pulumi.interpolate`http://${serverMongo.privateDns}`;
